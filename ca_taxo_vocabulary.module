@@ -1,0 +1,83 @@
+<?php 
+
+
+/**
+ * Tell ca about the conditions
+*/
+/*function ca_taxo_vocabulary_ca_condition() {
+  $order_arg = array('#entity' => 'uc_order');
+
+  $conditions['ca_taxo_vocabulary_check_vocabulary'] = array(
+    '#category' => t("Order: Product"),
+    '#title' => t("Check an order's products' taxonomy vocabularies"),
+    '#callback' => 'ca_taxo_vocabulary_check_vocabulary',
+    '#arguments' => array(
+      'order' => $order_arg,
+    ),
+    '#description' => t('Returns TRUE if any products on the order match the chosen vocabulary.'),
+  );
+
+  return $conditions;
+}*/
+
+
+/**
+ * Collect the terms
+*/
+/*function ca_taxo_vocabulary_check_vocabulary_form($form_state, $settings = array()) {
+
+  $vocabularies=taxonomy_get_vocabularies();
+  if (!count($vocabularies)) {
+    $form['message'] = array(
+      '#value' => t('Could not determine which vocabulary the catalog runs off')
+    );
+    return $form;
+  }
+  
+ $options = array();
+  foreach ($vocabularies as $vocabulary) {
+    $options[$vocabulary->vid] = check_plain($vocabulary->name);
+  }
+  
+  $form['taxo_vocabulary'] = array(
+    '#type'          => 'checkboxes',
+    '#title'         => t('Terms'),
+    '#options'       => $options,
+    '#default_value' => ((isset($settings['taxo_vocabulary']) && is_array($settings['taxo_vocabulary'])) ?
+                         $settings['taxo_vocabulary'] :
+                         array()),
+    '#description' => t('Choose the vocabulary to test products for'),
+    '#required'      => FALSE,
+  );
+  
+  
+  return $form;
+}*/
+
+
+/**
+ * Evaluate the condition
+ * @params $order object uc_order order object
+ * @params $settings array settings from the ca condition
+*/
+/*function ca_taxo_vocabulary_check_vocabulary($order, $settings) {
+  //remove the unset ones
+  array_filter($settings['taxo_vocabulary']);
+  
+  
+  foreach ($order->products as $product) {
+	    // Ignore "blank line" custom products.
+	    if ($product->nid && ($node = node_load($product->nid))) {	        	
+	        if(!empty($node->taxonomy)) {	        	  
+				  foreach ($node->taxonomy as $tid => $term) {
+				      $vid= $term->vid;
+					  if(in_array((int)$vid, $settings['taxo_vocabulary'])) {
+				          return TRUE;
+				      }
+				  }
+	        }
+	  }
+  }
+
+  return FALSE;
+}*/

@@ -1,0 +1,4 @@
+name = UC Taxonomy vocabulary Conditional Actions
+description = "Provides conditional actions conditions to filter on taxonomy vocabularies"
+package = "Ubercart - extra"
+core = "6.x"
