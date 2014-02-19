@@ -4,7 +4,7 @@
 /**
  * Tell ca about the conditions
 */
-/*function ca_taxo_vocabulary_ca_condition() {
+function ca_taxo_vocabulary_ca_condition() {
   $order_arg = array('#entity' => 'uc_order');
 
   $conditions['ca_taxo_vocabulary_check_vocabulary'] = array(
@@ -16,15 +16,25 @@
     ),
     '#description' => t('Returns TRUE if any products on the order match the chosen vocabulary.'),
   );
+  
+  $conditions['ca_taxo_vocabulary_check_all_terms'] = array(
+    '#category' => t("Order: Product"),
+    '#title' => t("Check an order's products' all terms"),
+    '#callback' => 'ca_taxo_vocabulary_check_all_terms',
+    '#arguments' => array(
+      'order' => $order_arg,
+    ),
+    '#description' => t('Returns TRUE if any products on the order match the chosen vocabulary.'),
+  );
 
   return $conditions;
-}*/
+}
 
 
 /**
  * Collect the terms
 */
-/*function ca_taxo_vocabulary_check_vocabulary_form($form_state, $settings = array()) {
+function ca_taxo_vocabulary_check_vocabulary_form($form_state, $settings = array()) {
 
   $vocabularies=taxonomy_get_vocabularies();
   if (!count($vocabularies)) {
@@ -41,7 +51,7 @@
   
   $form['taxo_vocabulary'] = array(
     '#type'          => 'checkboxes',
-    '#title'         => t('Terms'),
+    '#title'         => t('Vocabularies'),
     '#options'       => $options,
     '#default_value' => ((isset($settings['taxo_vocabulary']) && is_array($settings['taxo_vocabulary'])) ?
                          $settings['taxo_vocabulary'] :
@@ -52,7 +62,7 @@
   
   
   return $form;
-}*/
+}
 
 
 /**
@@ -60,7 +70,7 @@
  * @params $order object uc_order order object
  * @params $settings array settings from the ca condition
 */
-/*function ca_taxo_vocabulary_check_vocabulary($order, $settings) {
+function ca_taxo_vocabulary_check_vocabulary($order, $settings) {
   //remove the unset ones
   array_filter($settings['taxo_vocabulary']);
   
@@ -80,4 +90,124 @@
   }
 
   return FALSE;
-}*/
+}
+
+
+
+
+/**
+ * Collect the terms
+*/
+function ca_taxo_vocabulary_check_all_terms_form($form_state, $settings = array()) {
+   $vocabularies=taxonomy_get_vocabularies();
+  if (!count($vocabularies)) {
+    $form['message'] = array(
+      '#value' => t('Could not determine which vocabulary the catalog runs off')
+    );
+    return $form;
+  }
+  
+ foreach($vocabularies as $vocabulary) {      
+          $vid=$vocabulary->vid;
+          $vname=$vocabulary->name;
+          $terms = taxonomy_get_tree($vid);
+		  $options = array();
+		  foreach ($terms as $term) {
+		    $options[$term->tid] = str_repeat('-', $term->depth) . check_plain($term->name);
+		  }
+		  
+		  $form[$vid.'terms'] = array(
+		    '#type'          => 'checkboxes',
+		    '#title'         => t($vname.' Terms '),
+		    '#options'       => $options,
+		    '#default_value' => ((isset($settings[$vid.'terms']) && is_array($settings[$vid.'terms'])) ?
+		                         $settings[$vid.'terms'] :
+		                         array()),
+		    '#description' => t('Choose the terms to test products for'),
+		    '#required'      => FALSE,
+		  );
+		  
+		  $form[$vid.'nest'] = array(
+		    '#type' => 'checkbox',
+		    '#title' => t('Consider child terms as well'),
+		    '#description' => t('Check this box to have the condition also test if the product belongs to
+		                        a child term of the chosen terms.'),
+		    '#default_value' => $settings[$vid.'nest']
+		  );   
+    
+  }
+  
+ 
+
+  return $form;
+}
+
+/**
+ * Evaluate the condition
+ * @params $order object uc_order order object
+ * @params $settings array settings from the ca condition
+*/
+function ca_taxo_vocabulary_check_all_terms($order, $settings) {
+ 	
+  $vocabularies=taxonomy_get_vocabularies();
+  foreach($vocabularies as $vocabulary) {      
+          $vid=$vocabulary->vid;
+          $vname=$vocabulary->name;	
+		  //remove the unset ones
+		  array_filter($settings[$vid.'terms']);
+		  if($settings[$vid.'nest']) { 		    
+		    if (!$vid) {
+		      watchdog('ca_catalog_taxo_vocabulary', 'Could not determine which vocabulary the Ubercart catalog runs off');
+		      return FALSE;
+		    }		    
+		    $tree = taxonomy_get_tree($vid);
+		    $seq = 0;
+		    $menu_tree = new UcTreeNode();
+		    $level = array();
+		    $curr_depth = -1;
+		    foreach ($tree as $knot) {
+		      $seq++;
+		      $knot->sequence = $seq;
+		      $knothole = new UcTreeNode($knot);
+		      // Begin at the root of the tree and find the proper place.
+		      $menu_tree->add_child($knothole);
+		    }
+		
+		    foreach ($menu_tree->children as $term) {
+		      if ($settings[$vid.'terms'][$term->tid]) {
+		        //we want this term, add it's kiddies
+		        _ca_catalog_taxo_vocabulary_add_children($settings[$vid.'terms'], $term);
+		      }
+		    }
+		  }
+		  
+		  foreach ($order->products as $product) {
+		    // Ignore "blank line" custom products.
+		    if ($product->nid &&
+		        ($node = node_load($product->nid))) {
+		      foreach ($node->taxonomy as $tid => $term) {
+		        if (in_array((int)$tid, $settings[$vid.'terms'])) {
+		          return TRUE;
+		        }
+		      }
+		    }
+		  }
+  
+  }
+
+  return FALSE;
+}
+
+/**
+ * Utility, nested function to add children
+ * @param $terms array array of terms to search for, tids are added to this
+ * @param $term object ucTreeNode object to add children from ($term->children)
+*/
+function _ca_catalog_taxo_vocabulary_add_children(&$terms, $term) {
+  if ($term->children && is_array($term->children)) {
+    foreach ($term->children as $child) {
+      $terms[$child->tid] = (int)$child->tid;
+      _ca_catalog_taxo_vocabulary_add_children($terms, $child);
+    }
+  }
+}
